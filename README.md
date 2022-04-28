@@ -4,7 +4,7 @@ The place for collecting materials used for presentations/demos/lectures etc hel
 
 ## Structure
 
-- Each presentation have their own folder with the following naiming convention: `<yyyy-mm-dd>-<name-of-presentation>`
+- Each presentation have their own folder with the following naiming convention: `<yyyymmdd>_<name-of-presentation>`
 
 ## What should I upload?
 
