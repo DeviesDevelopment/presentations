@@ -1,0 +1,85 @@
+# Xcode
+
+# Build, test, and archive an Xcode workspace on macOS.
+# Add steps that install certificates, test, sign, and distribute an app, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/xcode
+variables:
+  - group: ios-pipeline
+  - name: configuration
+    value: "Release"
+  - name: sdk
+    value: "iphoneos"
+
+trigger:
+  - none
+
+pool:
+  vmImage: "macos-latest"
+
+steps:
+  - task: InstallAppleCertificate@2
+    inputs:
+      certSecureFile: "$(p12FileName)"
+      certPwd: "$(p12Password)"
+      keychain: "temp"
+      deleteCert: true
+
+  - task: InstallAppleProvisioningProfile@1
+    displayName: "Install Provisioning Profile"
+    inputs:
+      provisioningProfileLocation: "secureFiles"
+      provProfileSecureFile: "$(provisioningProfile)"
+      removeProfile: true
+
+  - task: CocoaPods@0
+    inputs:
+      workingDirectory: "app/project"
+      forceRepoUpdate: false
+
+  - task: Xcode@5
+    displayName: "Build project"
+    inputs:
+      actions: "clean build"
+      scheme: "xxx"
+      sdk: "$(sdk)"
+      configuration: "$(configuration)"
+      xcWorkspacePath: "**/xxx.xcworkspace"
+      xcodeVersion: "default"
+      packageApp: true
+      # Signing
+      signingOption: "manual"
+      signingIdentity: "$(APPLE_CERTIFICATE_SIGNING_IDENTITY)"
+      provisioningProfileUuid: "$(APPLE_PROV_PROFILE_UUID)"
+
+  - task: CopyFiles@2
+    displayName: "Copy files"
+    inputs:
+      contents: "**/*.ipa"
+      targetFolder: "$(Build.ArtifactStagingDirectory)"
+      overwrite: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: "Publish build artifact"
+    inputs:
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/output/$(sdk)/$(configuration)"
+      artifactName: "drop"
+      publishLocation: "Container"
+
+  - task: AppStoreRelease@1
+    displayName: "Publish to the App Store TestFlight track"
+    inputs:
+      authType: "UserAndPass"
+      username: "$(appStoreUsername)"
+      password: "$(appStorePassword)"
+      isTwoFactorAuth: true
+      appSpecificPassword: "$(appPassword)"
+      releaseTrack: "TestFlight"
+      appIdentifier: "se.dev.XXX"
+      appType: "iOS"
+      #distributedToExternalTesters: true
+      #externalTestersGroups: 'xxx Testers'
+      ipaPath: "$(Build.ArtifactStagingDirectory)/**/*.ipa"
+      shouldSkipWaitingForProcessing: true
+      appSpecificId: "$(appStoreSpecificAppleId)"
+      teamId: "$(teamID)"
+      teamName: "$(teamName)"
